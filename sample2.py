@@ -70,7 +70,8 @@ for k in range(num_vehicles):                # For each vehicle
             mdl.sum(x[h, j, k] for j in range(len(locations)) if j != h)
         )
 
-# Capacity constraints: vehicle load after visiting a customer must be at least that customer's demand and not exceed capacity
+# Capacity constraints: vehicle load after visiting a customer must be at least 
+# that customer's demand and not exceed capacity
 for i in range(1, len(locations)):           # For each customer
     for k in range(num_vehicles):            # For each vehicle
         mdl.add_constraint(load[i, k] >= demand[i] * 
@@ -148,3 +149,30 @@ if solution:
             print(f"Vehicle {k} Route: {route}")        # Print the route
 else:
     print("No solution found.")                         # Print if no solution was found
+
+"""""
+Identified problems in this code:
+
+This model still misses/loosens several EV-CVRP constraints. 
+here are where to edit to make it sound for an electric CVRP 
+(capacity + battery + depot start/return + no subtours).
+    
+1) Depot: enforce start = end (not “at most once”)
+Replace your “at most once” constraint with balance (one return per departure):
+
+2) Capacity: use propagation (MTZ-style), not just lower/upper bounds
+The load constraints only bound load[i,k] and tie it to visiting i, 
+but they don't propagate along arcs, so capacity cannot be enforced along the route. 
+Remove the two existing load constraints and add the correct propagation constraints.
+
+3) Battery: use ≤ propagation and bound to range
+The battery constraint is battery[j,k] >= battery[i,k] - distance - (1-x)*battery_range.
+That allows battery at j to be higher than it should be. 
+Flip it to ≤, add bounds, and explicitly ban arcs longer than one charge
+
+4) Optional per-vehicle degree caps (tidy but not strictly required)
+
+5) Route printing: follow successors from the depot:
+The second print loop can append nodes in an odd order (it checks “any i in route to j”). 
+Replace the whole route reconstruction with a successor walk starting at the depot:
+"""""
