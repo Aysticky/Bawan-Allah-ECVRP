@@ -163,3 +163,16 @@ else:
                 break  # safety
         if len(route) > 2:
             print(f"Vehicle {k} used={int(z[k].solution_value > 0.5)} route: {route}")
+"""
+Problem of “No solution found”
+Two things could have over-constrained the model:
+
+1. Battery propagation only with ≤ and applied on every (i,j) can chain tight 
+upper bounds and make the battery system inconsistent.
+
+2. No lower bound (≥0) on battery in that file.
+
+Solution:
+Replace the battery update with a two-sided big-M equality applied only on existing arcs 
+and add explicit 0 ≤ battery ≤ range. That should cure the infeasibility on the data.
+"""
