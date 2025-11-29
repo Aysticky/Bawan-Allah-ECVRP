@@ -12,36 +12,27 @@ locations = [
     (10, 20),
     (50, 50),
     (25, 25),
-    # --- optional stations appended here (examples) ---
-    (35, 35),  # 6: station A  ### NEW
-    (15, 15),  # 7: station B  ### NEW
+    # optional stations (can remove to test baseline feasibility)
+    (35, 35),  # 6: station A
+    (15, 15),  # 7: station B
 ]
 depot = 0
 
-demand = [0, 10, 15, 10, 20, 25, 0, 0]   # 0 for depot and stations  ### NEW
+demand = [0, 10, 15, 10, 20, 25, 0, 0]   # 0 for depot and stations
 vehicle_capacity = 40
-battery_range = 100.0                    # max distance per full charge
+battery_range = 100.0
 num_vehicles = 3
 
 # Energy model params: E = distance * (a + b * avg_load)
-a_fixed = 1.0                             # baseline energy per distance unit (vehicle + road)  ### NEW
-b_load  = 0.02                            # extra energy per distance per unit load            ### NEW
+a_fixed = 1.0
+b_load  = 0.02
 
 # Indices
 N = len(locations)
 ALL = range(N)
 CUST = [i for i in range(1, N) if demand[i] > 0]
-STATIONS = [i for i in range(N) if demand[i] == 0 and i != depot]  # all zero-demand non-depot nodes  ### NEW
+STATIONS = [i for i in range(N) if demand[i] == 0 and i != depot]  # set [] to disable charging nodes
 VEH = range(num_vehicles)
-
-"""
-If you don't want recharging nodes, just remove the added station coordinates 
-and keep locations as before; the code will still run (since STATIONS becomes empty).
-
-If you do want them, include any number of station coordinates in locations 
-and set demand=0 for each. They will be optional “free” nodes (no time windows, no service time)
-where vehicles may choose to recharge.
-"""
 
 # -----------------------------
 # Distances
@@ -59,12 +50,12 @@ for i in ALL:
 for i in ALL:
     for j in ALL:
         if i != j and dist[i][j] > battery_range:
-            dist[i][j] = float('inf')  # disallow these arcs
+            dist[i][j] = float('inf')
 
 # -----------------------------
 # Model
 # -----------------------------
-mdl = Model(name="Electric CVRP + Recharging, Energy Objective")
+mdl = Model(name="Electric CVRP + Recharging, Energy Objective (fixed)")
 
 # x[i,j,k] = 1 if vehicle k goes i -> j
 x = mdl.binary_var_dict(
@@ -72,25 +63,27 @@ x = mdl.binary_var_dict(
     name="x"
 )
 
-# load[i,k]  : load AFTER leaving node i by vehicle k (MTZ-like potential)  ### CHANGED (after-leaving)
+# load[i,k]  : load AFTER leaving node i by vehicle k
 load = mdl.continuous_var_dict([(i, k) for i in ALL for k in VEH], lb=0, ub=vehicle_capacity, name="load")
 
-# battery[i,k] : battery AFTER leaving node i by vehicle k                   ### CHANGED (after-leaving)
-battery = mdl.continuous_var_dict([(i, k) for i in ALL for k in VEH], lb=0, ub=battery_range, name="battery")
+# Battery split: b_in[v,k] = before node v; b_out[v,k] = after node v
+b_in  = mdl.continuous_var_dict([(i, k) for i in ALL for k in VEH], lb=0, ub=battery_range, name="b_in")
+b_out = mdl.continuous_var_dict([(i, k) for i in ALL for k in VEH], lb=0, ub=battery_range, name="b_out")
 
 # Vehicle use indicator
 z = mdl.binary_var_dict(VEH, name="z")
 
-# y[i,j,k] = load[i,k] * x[i,j,k]  (for energy linearization)               ### NEW
+# y[i,j,k] = load[i,k] * x[i,j,k]  (for energy linearization)
 y = mdl.continuous_var_dict([(i, j, k) for (i, j, k) in x.keys()], lb=0, ub=vehicle_capacity, name="y")
 
-# r[s,k] = 1 if we CHARGE at station s when we visit it                     ### NEW
+# r[s,k] = 1 if we CHARGE at station s when we visit it
 r = mdl.binary_var_dict([(s, k) for s in STATIONS for k in VEH], name="r")
 
-""" Objective: minimize total ENERGY
-E_ijk = dist[i][j] * (a_fixed*x + b_load*( y[i,j,k] + 0.5*demand[j]*x ))
-where y = load[i,k]*x and avg_load ≈ load[i,k] + 0.5*demand[j] """
-
+# -----------------------------
+# Objective: minimize total ENERGY
+# E_ijk = dist[i][j] * (a_fixed*x + b_load*( y[i,j,k] + 0.5*demand[j]*x ))
+# avg_load ≈ load[i,k] + 0.5*demand[j]
+# -----------------------------
 mdl.minimize(
     mdl.sum(
         dist[i][j] * (a_fixed * x[i, j, k] + b_load * (y[i, j, k] + 0.5 * demand[j] * x[i, j, k]))
@@ -124,50 +117,63 @@ for k in VEH:
     mdl.add_constraint(arrive <= z[k], f"use_link_arr_{k}")
 
 # 4) Capacity propagation (MTZ) with "after leaving node" load
-# load[depot,k] = 0; and if arc i->j is taken, then load[j,k] = load[i,k] + demand[j]
 for k in VEH:
     mdl.add_constraint(load[depot, k] == 0, f"load_depot_{k}")
-    for (i, j, k2) in x.keys():
-        if k2 != k:
+    for (i, j, kk) in x.keys():
+        if kk != k: 
             continue
-        # Big-M equality: load[j] == load[i] + demand[j] when x=1; relaxed otherwise
+        # Big-M equality: load[j] == load[i] + demand[j] when x=1
         mdl.add_constraint(load[j, k] >= load[i, k] + demand[j] - vehicle_capacity * (1 - x[i, j, k]))
         mdl.add_constraint(load[j, k] <= load[i, k] + demand[j] + vehicle_capacity * (1 - x[i, j, k]))
 
-# 5) Battery propagation with optional charging at stations
-# battery[depot,k] = full
-M_batt = battery_range
+# -----------------------------
+# Battery model (fixed)
+# -----------------------------
+M = battery_range
+
+# Depot: full battery before and after
 for k in VEH:
-    mdl.add_constraint(battery[depot, k] == battery_range, f"batt_depot_{k}")
+    mdl.add_constraint(b_in[depot, k]  == battery_range, f"bin_depot_{k}")
+    mdl.add_constraint(b_out[depot, k] == battery_range, f"bout_depot_{k}")
 
-# Arc-based two-sided big-M equality: battery[j] == battery[i] - dist[i][j] when x=1
+# Arc propagation: arriving battery BEFORE node j equals previous node's AFTER minus distance
 for (i, j, k) in x.keys():
-    mdl.add_constraint(battery[j, k] >= battery[i, k] - dist[i][j] - M_batt * (1 - x[i, j, k]))
-    mdl.add_constraint(battery[j, k] <= battery[i, k] - dist[i][j] + M_batt * (1 - x[i, j, k]))
+    mdl.add_constraint(b_in[j, k] >= b_out[i, k] - dist[i][j] - M * (1 - x[i, j, k]))
+    mdl.add_constraint(b_in[j, k] <= b_out[i, k] - dist[i][j] + M * (1 - x[i, j, k]))
 
-# Charging decision at stations: if r[s,k]=1 (and we visit s), set battery[s,k]=full
-for s in STATIONS:
+# Node update:
+# - For stations s: if r[s,k]=1 then b_out[s,k] = battery_range; else b_out[s,k] = b_in[s,k]
+# - For customers v: force r[v,k]=0 and b_out[v,k] = b_in[v,k]
+for v in range(1, N):
     for k in VEH:
-        in_s = mdl.sum(x[i, s, k] for i in ALL if i != s and (i, s, k) in x)
-        out_s = mdl.sum(x[s, j, k] for j in ALL if j != s and (s, j, k) in x)
-        # Can only charge if we actually visit s
-        mdl.add_constraint(r[s, k] <= in_s)
-        mdl.add_constraint(r[s, k] <= out_s)
-        # If r=1 ⇒ battery[s,k] = battery_range
-        mdl.add_constraint(battery[s, k] >= battery_range - M_batt * (1 - r[s, k]))
-        mdl.add_constraint(battery[s, k] <= battery_range + M_batt * (1 - r[s, k]))
+        if v in STATIONS:
+            # Can only charge if we actually visit s (both in and out)
+            in_v  = mdl.sum(x[i, v, k] for i in ALL if i != v and (i, v, k) in x)
+            out_v = mdl.sum(x[v, j, k] for j in ALL if j != v and (v, j, k) in x)
+            mdl.add_constraint(r[v, k] <= in_v)
+            mdl.add_constraint(r[v, k] <= out_v)
+            # If r=1 => b_out = full; if r=0 => b_out = b_in
+            mdl.add_constraint(b_out[v, k] >= battery_range - M * (1 - r[v, k]))
+            mdl.add_constraint(b_out[v, k] <= battery_range + M * (1 - r[v, k]))
+            mdl.add_constraint(b_out[v, k] >= b_in[v, k] - M * r[v, k])
+            mdl.add_constraint(b_out[v, k] <= b_in[v, k] + M * r[v, k])
+        else:
+            # Not a station: no charging
+            # Create a dummy r=0 by equality (keeps model simpler than defining separate r for customers)
+            mdl.add_constraint(b_out[v, k] == b_in[v, k])
 
-# 6) Forbid arcs longer than one charge (already filtered); safety:
+# Safety: forbid arcs longer than one full charge (already filtered above)
 for (i, j, k) in x.keys():
     if dist[i][j] > battery_range:
         mdl.add_constraint(x[i, j, k] == 0)
 
-# 7) Linearization for y = load[i,k] * x[i,j,k]
+# -----------------------------
+# Linearization for y = load[i,k] * x[i,j,k]
+# -----------------------------
 for (i, j, k) in x.keys():
     mdl.add_constraint(y[i, j, k] <= load[i, k])
     mdl.add_constraint(y[i, j, k] <= vehicle_capacity * x[i, j, k])
     mdl.add_constraint(y[i, j, k] >= load[i, k] - vehicle_capacity * (1 - x[i, j, k]))
-    # y >= 0 already from var lb
 
 # -----------------------------
 # Solve
@@ -178,8 +184,6 @@ if not solution:
     print("No solution found.")
 else:
     print("Objective (total energy):", solution.objective_value)
-
-    # Reconstruct and print routes per vehicle
     for k in VEH:
         succ = {}
         for (i, j, kk) in x.keys():
@@ -194,11 +198,10 @@ else:
             if nxt == depot:
                 break
             if len(route) > N + 2:
-                break  # safety
-        # Show charge actions on the path, if any
+                break
         if len(route) > 2:
-            charges = [(s, k) for s in route if s in STATIONS and (s, k) in r and r[s, k].solution_value > 0.5]
-            print(f"Vehicle {k} route: {route} ; charges at: {[s for (s, _) in charges]}")
+            charges = [v for v in route if v in STATIONS and r[v, k].solution_value > 0.5]
+            print(f"Vehicle {k} route: {route} ; charges at: {charges}")
 
 
 """

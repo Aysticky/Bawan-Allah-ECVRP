@@ -2,11 +2,10 @@
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
+source .venv/Scripts/activate
+
 # 2) Upgrade pip
 python -m pip install -U pip
 
-# 3) Install the package with all deps (editable)
-pip install -e .
-
 # 4) Run your script
-python test_evidently_local.py
+python sample4.py
