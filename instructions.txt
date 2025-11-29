@@ -1,11 +1,18 @@
-# 1) Create + activate a 3.12 venv
-py -3.12 -m venv .venv
+# Python 3.10 Virtual Environment Setup (CPLEX Compatible)
+
+# The .venv is already created with Python 3.10 and CPLEX installed!
+
+# To activate the virtual environment:
+# In PowerShell:
 .\.venv\Scripts\Activate.ps1
 
+# In Bash/Git Bash:
 source .venv/Scripts/activate
 
-# 2) Upgrade pip
-python -m pip install -U pip
-
-# 4) Run your script
+# Once activated, simply run:
 python sample4.py
+
+# Note: VS Code should automatically detect and use the .venv
+# If you need to recreate the venv:
+# py -3.10 -m venv .venv
+# .venv/Scripts/python.exe c:/Users/ID080625/python/setup.py install

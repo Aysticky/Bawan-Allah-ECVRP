@@ -2,7 +2,7 @@ from docplex.mp.model import Model
 import math
 
 # -----------------------------
-# Data
+# Sample data
 # -----------------------------
 num_customers = 5
 locations = [
