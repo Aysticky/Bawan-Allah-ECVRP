@@ -8,40 +8,24 @@ vehicle capacity, battery constraints, and charging stations.
 
 from docplex.mp.model import Model
 import math
+from customer_data import num_customers, locations, depot, demand, vehicle_capacity, battery_capacity, num_vehicles
 
 ## Parameters and Data
 
-# Network configuration
-num_customers = 5  # Waste collection points
-locations = [
-    (30, 40),   # 0: Depot (waste processing facility)
-    (40, 30),   # 1: Customer
-    (20, 10),   # 2: Customer
-    (10, 20),   # 3: Customer
-    (50, 50),   # 4: Customer
-    (25, 25),   # 5: Customer
-    (35, 35),   # 6: Charging station A
-    (15, 15),   # 7: Charging station B
-]
-depot = 0
+## Import customer data from external file
+# num_customers, locations, depot, demand, vehicle_capacity, battery_capacity, num_vehicles
+# are now loaded from customer_data.py
 
-# Waste demands (kg or m³)
-demand = [0, 10, 15, 10, 20, 25, 0, 0]
-
-# Vehicle specifications
-vehicle_capacity = 50  # Increased capacity to ensure feasibility
-battery_capacity = 120.0  # kWh
-num_vehicles = 3
+grid_size = 100  # 100 km x 100 km city grid
+total_demand = sum(demand)
 
 # Energy consumption model: E = α₁ * d + α₂ * d * w
 # α₁: energy per km (empty vehicle)
 # α₂: additional energy per km per unit load
 alpha_empty = 0.8      # kWh per km (empty)
-alpha_loaded = 0.015   # kWh per km per kg of waste
+alpha_loaded = 0.0003   # kWh per km per kg of waste
 
 # Battery consumption rate: dist * (alpha_empty + alpha_loaded * load)
-# Service time at nodes
-service_time = [0] + [5] * num_customers + [15, 15]  # minutes (15 min charging)
 
 ## Derived sets and parameters
 
@@ -133,7 +117,7 @@ model.minimize(energy_cost)
 # Each customer must be visited exactly once
 for j in CUSTOMERS:
     model.add_constraint(
-        model.sum(x[i, j, k] for k in VEHICLES for i in ALL_NODES if (i, j, k) in x) == 1,
+        model.sum(x[i, j, k] for k in VEHICLES for i in ALL_NODES if i != j) == 1,
         ctname=f"visit_customer_{j}"
     )
 
@@ -142,8 +126,8 @@ for j in CUSTOMERS:
 # For each vehicle and node, inflow = outflow
 for k in VEHICLES:
     for i in range(1, N):  # All nodes except depot
-        inflow = model.sum(x[j, i, k] for j in ALL_NODES if (j, i, k) in x)
-        outflow = model.sum(x[i, j, k] for j in ALL_NODES if (i, j, k) in x)
+        inflow = model.sum(x[j, i, k] for j in ALL_NODES if j != i)
+        outflow = model.sum(x[i, j, k] for j in ALL_NODES if j != i)
         model.add_constraint(
             inflow == outflow,
             ctname=f"flow_conservation_{i}_{k}"
@@ -151,8 +135,8 @@ for k in VEHICLES:
 
 # Depot flow: vehicles can leave and return multiple times (for waste dumping)
 for k in VEHICLES:
-    depot_outflow = model.sum(x[depot, j, k] for j in range(1, N) if (depot, j, k) in x)
-    depot_inflow = model.sum(x[j, depot, k] for j in range(1, N) if (j, depot, k) in x)
+    depot_outflow = model.sum(x[depot, j, k] for j in range(1, N))
+    depot_inflow = model.sum(x[j, depot, k] for j in range(1, N))
     
     # Must start and end at depot
     model.add_constraint(depot_outflow >= 1, ctname=f"depot_start_{k}")
@@ -164,7 +148,7 @@ for k in VEHICLES:
 # Link visit variable to x variables
 for k in VEHICLES:
     for i in range(1, N):
-        incoming = model.sum(x[j, i, k] for j in ALL_NODES if (j, i, k) in x)
+        incoming = model.sum(x[j, i, k] for j in ALL_NODES if j != i)
         model.add_constraint(visit[i, k] == incoming, ctname=f"visit_link_{i}_{k}")
 
 # 4. Capacity constraints
@@ -178,7 +162,7 @@ for k in VEHICLES:
 for k in VEHICLES:
     for i in ALL_NODES:
         for j in ALL_NODES:
-            if (i, j, k) in x:
+            if i != j:
                 if j == depot:
                     # Returning to depot: unload everything
                     model.add_constraint(
@@ -222,7 +206,7 @@ for k in VEHICLES:
 for k in VEHICLES:
     for i in ALL_NODES:
         for j in ALL_NODES:
-            if (i, j, k) in x:
+            if i != j:
                 # Energy consumed = distance * (alpha_empty + alpha_loaded * load_at_i)
                 energy_consumed = distance[i][j] * (alpha_empty + alpha_loaded * load[i, k])
                 
@@ -274,7 +258,7 @@ for k in VEHICLES:
 for k in VEHICLES:
     for i in ALL_NODES:
         for j in ALL_NODES:
-            if (i, j, k) in x:
+            if i != j:
                 # When traversing i->j, battery at i must be sufficient
                 max_energy_needed = distance[i][j] * (alpha_empty + alpha_loaded * vehicle_capacity)
                 model.add_constraint(
