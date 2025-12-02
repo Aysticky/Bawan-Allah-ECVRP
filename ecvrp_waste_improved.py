@@ -8,7 +8,9 @@ vehicle capacity, battery constraints, and charging stations.
 
 from docplex.mp.model import Model
 import math
+import random
 from customer_data import num_customers, locations, depot, demand, vehicle_capacity, battery_capacity, num_vehicles
+from ga_solver import GeneticAlgorithm
 
 ## Parameters and Data
 
@@ -39,48 +41,329 @@ VEHICLES = range(num_vehicles)
 def euclidean_distance(loc1, loc2):
     return math.hypot(loc1[0] - loc2[0], loc1[1] - loc2[1]) # Euclidean distance
 
+print("\nCalculating distance matrix...")
 distance = [[0.0] * N for _ in ALL_NODES]
 for i in ALL_NODES:
     for j in ALL_NODES:
         if i != j:
             distance[i][j] = euclidean_distance(locations[i], locations[j]) # in km
 
-# Calculate maximum possible energy consumption for an arc
-max_energy_per_arc = {}
-for i in ALL_NODES:
-    for j in ALL_NODES:
-        if i != j:
-            # Maximum load scenario
-            max_energy = distance[i][j] * (alpha_empty + alpha_loaded * vehicle_capacity) 
-            max_energy_per_arc[(i, j)] = max_energy # max energy needed for arc (i,j)
+print(f" Distance matrix calculated ({N}x{N} = {N*N:,} entries)")
+print("=" * 80)
+
+# Solver selection----------------------
+
+print("\nSelect solving method:")
+print("1. CPLEX MIP Solver")
+print("2. Genetic Algorithm")
+solver_choice = input("Enter choice (1 or 2): ").strip()
+
+if solver_choice == "2":
+    print("\n" + "=" * 80)
+    print("Using Genetic Algorithm Solver")
+    print("=" * 80)
+    
+    # ECVRP-specific functions for GA------------------------------
+    
+    def create_ecvrp_individual():
+        """Create random ECVRP solution (list of routes)"""
+        customers = list(CUSTOMERS)
+        random.shuffle(customers)
+        
+        routes = []
+        current_route = [depot]
+        current_load = 0
+        
+        for customer in customers:
+            if current_load + demand[customer] <= vehicle_capacity:
+                current_route.append(customer)
+                current_load += demand[customer]
+            else:
+                current_route.append(depot)
+                routes.append(current_route)
+                current_route = [depot, customer]
+                current_load = demand[customer]
+        
+        if len(current_route) > 1:
+            current_route.append(depot)
+            routes.append(current_route)
+        
+        while len(routes) < num_vehicles:
+            routes.append([depot, depot])
+        
+        return routes[:num_vehicles]
+    
+    def evaluate_ecvrp(individual):
+        """Evaluate fitness of ECVRP solution"""
+        total_energy = 0
+        penalty = 0
+        
+        # Track served customers
+        served = set()
+        for route in individual:
+            for node in route:
+                if node in CUSTOMERS:
+                    served.add(node)
+        
+        # Calculate energy and check feasibility
+        for route in individual:
+            if len(route) <= 2:
+                continue
+            
+            route_energy = 0
+            current_load = 0
+            current_battery = battery_capacity
+            capacity_violated = False
+            battery_violated = False
+            
+            for i in range(len(route) - 1):
+                from_node = route[i]
+                to_node = route[i + 1]
+                
+                # Update load
+                if to_node in CUSTOMERS:
+                    current_load += demand[to_node]
+                elif to_node == depot and from_node != depot:
+                    current_load = 0
+                
+                # Check capacity
+                if current_load > vehicle_capacity:
+                    capacity_violated = True
+                
+                # Calculate energy
+                dist = distance[from_node][to_node]
+                energy = dist * (alpha_empty + alpha_loaded * current_load)
+                route_energy += energy
+                
+                # Update battery
+                if to_node == depot:
+                    current_battery = battery_capacity
+                else:
+                    current_battery -= energy
+                
+                # Check battery
+                if current_battery < 0:
+                    battery_violated = True
+            
+            total_energy += route_energy
+            
+            if capacity_violated:
+                penalty += 5000
+            if battery_violated:
+                penalty += 5000
+        
+        # Penalty for unserved customers
+        unserved = len(CUSTOMERS) - len(served)
+        penalty += unserved * 50000
+        
+        # Penalty for duplicate customers
+        all_customers = []
+        for route in individual:
+            all_customers.extend([n for n in route if n in CUSTOMERS])
+        duplicates = len(all_customers) - len(set(all_customers))
+        penalty += duplicates * 50000
+        
+        # Fitness (higher is better)
+        return -total_energy - penalty
+    
+    def crossover_ecvrp(parent1, parent2):
+        """Order crossover for ECVRP routes"""
+        # Flatten routes
+        customers1 = []
+        for route in parent1:
+            customers1.extend([c for c in route if c in CUSTOMERS])
+        
+        customers2 = []
+        for route in parent2:
+            customers2.extend([c for c in route if c in CUSTOMERS])
+        
+        # Order crossover
+        size = len(customers1)
+        start, end = sorted(random.sample(range(size), 2))
+        
+        offspring_customers = [None] * size
+        offspring_customers[start:end] = customers1[start:end]
+        
+        p2_idx = 0
+        for i in range(size):
+            if offspring_customers[i] is None:
+                while customers2[p2_idx] in offspring_customers:
+                    p2_idx += 1
+                offspring_customers[i] = customers2[p2_idx]
+                p2_idx += 1
+        
+        # Rebuild routes
+        offspring = []
+        current_route = [depot]
+        current_load = 0
+        
+        for customer in offspring_customers:
+            if current_load + demand[customer] <= vehicle_capacity:
+                current_route.append(customer)
+                current_load += demand[customer]
+            else:
+                current_route.append(depot)
+                offspring.append(current_route)
+                current_route = [depot, customer]
+                current_load = demand[customer]
+        
+        if len(current_route) > 1:
+            current_route.append(depot)
+            offspring.append(current_route)
+        
+        while len(offspring) < num_vehicles:
+            offspring.append([depot, depot])
+        
+        return offspring[:num_vehicles]
+    
+    def mutate_ecvrp(individual):
+        """Mutation for ECVRP routes"""
+        mutated = [route.copy() for route in individual]
+        
+        non_empty = [i for i, r in enumerate(mutated) if len(r) > 3]
+        
+        if len(non_empty) >= 2 and random.random() < 0.5:
+            # Swap mutation
+            r1_idx, r2_idx = random.sample(non_empty, 2)
+            r1 = mutated[r1_idx]
+            r2 = mutated[r2_idx]
+            
+            c1_idx = random.randint(1, len(r1) - 2)
+            c2_idx = random.randint(1, len(r2) - 2)
+            r1[c1_idx], r2[c2_idx] = r2[c2_idx], r1[c1_idx]
+        elif non_empty:
+            # Reverse mutation
+            route_idx = random.choice(non_empty)
+            route = mutated[route_idx]
+            
+            if len(route) > 4:
+                i = random.randint(1, len(route) - 3)
+                j = random.randint(i + 1, len(route) - 2)
+                route[i:j+1] = reversed(route[i:j+1])
+        
+        return mutated
+    
+    # Run GA Solver--------------------------------
+    
+    ga = GeneticAlgorithm(population_size=50, mutation_rate=0.2, elite_size=5, tournament_size=5)
+    
+    import time
+    solve_start = time.time()
+    
+    solution_routes, best_fitness, fitness_history = ga.solve(
+        create_individual_fn=create_ecvrp_individual,
+        evaluate_fn=evaluate_ecvrp,
+        crossover_fn=crossover_ecvrp,
+        mutate_fn=mutate_ecvrp,
+        generations=100,
+        verbose=True
+    )
+    
+    solve_time = time.time() - solve_start
+    
+    # Calculate solution metrics
+    total_energy = 0
+    total_distance = 0
+    total_waste_collected = 0
+    vehicles_used = 0
+    
+    print("\n" + "=" * 80)
+    print("SOLUTION FOUND BY GA!")
+    print("=" * 80)
+    print(f"\n⏱️  Solve Time: {solve_time:.2f} seconds")
+    
+    for k, route in enumerate(solution_routes):
+        if len(route) > 2:
+            vehicles_used += 1
+            
+            # Calculate energy
+            route_energy = 0
+            current_load = 0
+            for i in range(len(route) - 1):
+                from_node = route[i]
+                to_node = route[i + 1]
+                
+                if to_node in CUSTOMERS:
+                    current_load += demand[to_node]
+                elif to_node == depot and from_node != depot:
+                    current_load = 0
+                
+                dist = distance[from_node][to_node]
+                energy = dist * (alpha_empty + alpha_loaded * current_load)
+                route_energy += energy
+                total_distance += dist
+            
+            total_energy += route_energy
+            
+            customers_served = [c for c in route if c in CUSTOMERS]
+            waste = sum(demand[c] for c in customers_served)
+            total_waste_collected += waste
+            
+            if vehicles_used <= 5:
+                print(f"\nVehicle {k}:")
+                route_preview = route[:30] if len(route) > 30 else route
+                print(f"  Route: {' -> '.join(map(str, route_preview))}")
+                if len(route) > 30:
+                    print(f"  ... ({len(route)} total stops)")
+                print(f"  Customers: {len(customers_served)}, Waste: {waste} kg, Energy: {route_energy:.1f} kWh")
+    
+    if vehicles_used > 5:
+        print(f"\n... and {vehicles_used - 5} more vehicles")
+    
+    print("-" * 80)
+    print(f" Vehicles Used:          {vehicles_used} / {num_vehicles}")
+    print(f" Customers Served:       {num_customers} / {num_customers}")
+    print(f" Total Distance:         {total_distance:.2f} km")
+    print(f"  Total Waste Collected:  {total_waste_collected} kg ({total_waste_collected/1000:.1f} tons)")
+    print(f" Total Energy Consumed:  {total_energy:.2f} kWh")
+    print(f" Average Energy per km:  {total_energy/total_distance:.3f} kWh/km")
+    print("=" * 80)
+    
+    import sys
+    sys.exit(0)
+
+# CPLEX MIP Solver----------------------
+
+print("\n" + "=" * 80)
+print("USING CPLEX MIP SOLVER")
+print("=" * 80)
+
 
 ## Model initialization
 
+print("\nBuilding optimization model...")
 model = Model(name="ECVRP_Waste_Collection")
+
+# Enable parallel processing
+model.context.cplex_parameters.threads = 0  # Use all available cores
 
 ## Decision Variables
 
 # Binary: x[i,j,k] = 1 if vehicle k travels from i to j
 x = {}
+print("Creating route decision variables...")
 for k in VEHICLES:
     for i in ALL_NODES:
         for j in ALL_NODES:
             if i != j:
-                # Only create arcs that are feasible (can be traversed with full battery)
-                if max_energy_per_arc[(i, j)] <= battery_capacity:
-                    x[i, j, k] = model.binary_var(name=f"x_{i}_{j}_{k}")
+                x[i, j, k] = model.binary_var(name=f"x_{i}_{j}_{k}")
+print(f" Created {len(x):,} route variables")
 
 # Continuous: load[i,k] = waste load on vehicle k when leaving node i
 load = {}
+print("Creating load tracking variables...")
 for k in VEHICLES:
     for i in ALL_NODES:
         load[i, k] = model.continuous_var(lb=0, ub=vehicle_capacity, name=f"load_{i}_{k}")
+print(f" Created {len(load):,} load variables")
 
 # Continuous: battery[i,k] = battery level of vehicle k when arriving at node i
 battery = {}
+print("Creating battery tracking variables...")
 for k in VEHICLES:
     for i in ALL_NODES:
         battery[i, k] = model.continuous_var(lb=0, ub=battery_capacity, name=f"battery_{i}_{k}")
+print(f" Created {len(battery):,} battery variables")
 
 # Binary: charge[s,k] = 1 if vehicle k charges at station s
 charge = {}
@@ -99,7 +382,12 @@ u = {}
 for (i, j, k) in x.keys():
     u[i, j, k] = model.continuous_var(lb=0, ub=vehicle_capacity, name=f"u_{i}_{j}_{k}")
 
-## Objective Function
+total_vars = len(x) + len(load) + len(battery) + len(charge) + len(visit) + len(u)
+print(f"\n Total variables created: {total_vars:,}")
+print(f"  - Binary: {len(x) + len(charge) + len(visit):,}")
+print(f"  - Continuous: {len(load) + len(battery) + len(u):,}")
+
+## Objective Function--------------------------------
 
 # Minimize total energy consumption
 # Energy for arc (i,j) with vehicle k = distance[i][j] * (alpha_empty * x + alpha_loaded * u)
@@ -110,7 +398,7 @@ energy_cost = model.sum(
 
 model.minimize(energy_cost)
 
-## Constraints
+## Constraints--------------------------------
 
 # 1. Customer visit constraints
 
@@ -275,31 +563,31 @@ for (i, j, k) in x.keys():
     model.add_constraint(u[i, j, k] >= load[i, k] - vehicle_capacity * (1 - x[i, j, k]), 
                         ctname=f"mccormick_3_{i}_{j}_{k}")
 
-# Solve the model
-print(f"Customers: {len(CUSTOMERS)}")
-print(f"Charging Stations: {len(CHARGING_STATIONS)}")
-print(f"Vehicles: {num_vehicles}")
-print(f"Vehicle Capacity: {vehicle_capacity} kg")
-print(f"Battery Capacity: {battery_capacity} kWh")
-print(f"Total Demand: {sum(demand)} kg")
-print("=" * 70)
+## Solve the model--------------------------------------------------
+print("\n" + "=" * 80)
+print("Solving ECVRP")
+print("=" * 80)
+print(f"Problem size: {num_customers} customers, {num_vehicles} vehicles")
+print(f"Started at: {__import__('time').strftime('%H:%M:%S')}")
+print("=" * 80 + "\n")
 
-# Set solver parameters for better performance
-model.parameters.timelimit = 300  # 5 minutes
-model.parameters.mip.tolerances.mipgap = 0.02 
-
+import time
+solve_start = time.time()
 solution = model.solve(log_output=True)
+solve_time = time.time() - solve_start
 
-# Results output
+## Results output-------------------------------
 
 if not solution:
     print("NO SOLUTION FOUND")
    
 else:
     print("SOLUTION FOUND!")
-    print(f"\nObjective Value (Total Energy): {solution.objective_value:.2f} kWh")
-    print(f"Solution Status: {solution.solve_status}")
-    print(f"MIP Gap: {solution.solve_details.mip_relative_gap * 100:.2f}%")
+    print("=" * 80)
+    print(f"\n Solve Time: {solve_time:.2f} seconds ({solve_time/60:.2f} minutes)")
+    print(f" Objective Value (Total Energy): {solution.objective_value:.2f} kWh")
+    print(f" Solution Status: {solution.solve_status}")
+    print(f" MIP Gap: {solution.solve_details.mip_relative_gap * 100:.2f}%")
     
     # Extract and display routes
     print("\n" + "-" * 70)
@@ -307,6 +595,9 @@ else:
     
     total_distance = 0
     total_waste_collected = 0
+    vehicles_used = 0
+    total_depot_returns = 0
+    total_charging_stops = 0
     
     for k in VEHICLES:
         # Build route from x variables
@@ -314,15 +605,15 @@ else:
                       if kk == k and x[i, j, k].solution_value > 0.5]
         
         if not route_arcs:
-            print(f"\nVehicle {k}: NOT USED")
             continue
         
+        vehicles_used += 1
         # Reconstruct route
         current = depot
         route = [depot]
         visited_arcs = set()
         
-        while True:
+        while len(route) < 300:  # Safety limit for large routes
             next_node = None
             for (i, j) in route_arcs:
                 if i == current and (i, j) not in visited_arcs:
@@ -356,29 +647,24 @@ else:
                          if visit[s, k].solution_value > 0.5 
                          and charge[s, k].solution_value > 0.5]
         
-        print(f"\nVehicle {k}:")
-        print(f"  Route: {' -> '.join(map(str, route))}")
-        print(f"  Distance: {route_distance:.2f} km")
-        print(f"  Waste Collected: {waste_collected} kg")
-        print(f"  Customers Served: {customers_served}")
-        if charging_stops:
-            print(f"  Charging Stations Used: {charging_stops}")
+        depot_returns = route.count(depot) - 1  # Exclude starting position
         
-        # Show battery levels at key points
-        print(f"  Battery levels:")
-        for i, node in enumerate(route):
-            if node in [depot] + CUSTOMERS + CHARGING_STATIONS:
-                batt_level = battery[node, k].solution_value
-                print(f"    At node {node}: {batt_level:.2f} kWh", end="")
-                if node in CHARGING_STATIONS and charge[node, k].solution_value > 0.5:
-                    print(" (CHARGED HERE)", end="")
-                print()
+        # Show detailed output only for first 5 vehicles
+        if vehicles_used <= 5:
+            print(f"\nVehicle {k}:")
+            # Show abbreviated route for large instances
+            route_preview = route[:30] if len(route) > 30 else route
+            print(f"  Route preview: {' -> '.join(map(str, route_preview))}")
+            if len(route) > 30:
+                print(f"  ... (route continues for {len(route)} total stops)")
+            print(f"  Distance: {route_distance:.2f} km")
+            print(f"  Waste Collected: {waste_collected} kg ({waste_collected/1000:.2f} tons)")
+            print(f"  Customers Served: {len(customers_served)}")
+            print(f"  Depot Returns: {depot_returns}")
+            if charging_stops:
+                print(f"  Charging Stations Used: {len(charging_stops)} times")
         
         total_distance += route_distance
         total_waste_collected += waste_collected
-    
-    print("\n" + "-" * 70)
-    print(f"Total Distance: {total_distance:.2f} km")
-    print(f"Total Waste Collected: {total_waste_collected} kg")
-    print(f"Total Energy Consumed: {solution.objective_value:.2f} kWh")
-    print(f"Average Energy per km: {solution.objective_value/total_distance:.2f} kWh/km")
+        total_depot_returns += depot_returns
+        total_charging_stops += len(charging_stops)
