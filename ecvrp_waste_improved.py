@@ -267,10 +267,8 @@ if solver_choice == "2":
     total_waste_collected = 0
     vehicles_used = 0
     
-    print("\n" + "=" * 80)
-    print("SOLUTION FOUND BY GA!")
-    print("=" * 80)
-    print(f"\n⏱️  Solve Time: {solve_time:.2f} seconds")
+    print("Solution Found by GA!")
+    print(f"\n  Solve Time: {solve_time:.2f} seconds")
     
     for k, route in enumerate(solution_routes):
         if len(route) > 2:
@@ -668,3 +666,36 @@ else:
         total_waste_collected += waste_collected
         total_depot_returns += depot_returns
         total_charging_stops += len(charging_stops)
+
+    if vehicles_used > 5:
+        print(f"\n... and {vehicles_used - 5} more vehicles (detailed routes omitted for brevity)")
+    
+    print("-" * 80)
+    print(f" Vehicles used:          {vehicles_used} / {num_vehicles}")
+    print(f" Customers served:       {num_customers} / {num_customers}")
+    print(f" Total distance:         {total_distance:.2f} km")
+    print(f"  Total waste collected:  {total_waste_collected} kg ({total_waste_collected/1000:.1f} tons)")
+    print(f" Total depot returns:    {total_depot_returns}")
+    print(f" Total charging stops:   {total_charging_stops}")
+    print(f" Total energy consumed:  {solution.objective_value:.2f} kWh")
+    print(f" Average energy per km:  {solution.objective_value/total_distance:.3f} kWh/km")
+    print(f" Avg distance/vehicle:   {total_distance/vehicles_used:.2f} km")
+    print(f" Avg waste/vehicle:      {total_waste_collected/vehicles_used:.1f} kg")
+    
+    print("Performance Metrics:")
+    print("-" * 80)
+    print(f" Computational time:     {solve_time:.2f} seconds ({solve_time/60:.2f} minutes)")
+    print(f" Variables:              {total_vars:,}")
+    print(f" Constraints:            {model.number_of_constraints:,}")
+    print(f" Optimality gap:         {solution.solve_details.mip_relative_gap * 100:.2f}%")
+    print(f" Customers/minute:       {num_customers/(solve_time/60):.1f}")
+    
+    print("\n" + "=" * 80)
+    print(" ECVRP SOlved Successfully")
+    print("=" * 80)
+    print(f" {num_customers} customers routed using {vehicles_used} vehicles")
+    print(f" {total_waste_collected/1000:.1f} tons of waste collected")
+    print(f" {total_distance:.1f} km total distance traveled")
+    print(f" {solution.objective_value:.1f} kWh total energy consumption")
+    print(f" Solved in {solve_time/60:.2f} minutes")
+    print("=" * 80)
