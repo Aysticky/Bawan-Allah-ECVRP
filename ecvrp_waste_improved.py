@@ -11,6 +11,7 @@ import math
 import random
 from customer_data import num_customers, locations, depot, demand, vehicle_capacity, battery_capacity, num_vehicles
 from ga_solver import GeneticAlgorithm
+from sa_solver import SimulatedAnnealing
 
 ## Parameters and Data
 
@@ -49,19 +50,17 @@ for i in ALL_NODES:
             distance[i][j] = euclidean_distance(locations[i], locations[j]) # in km
 
 print(f" Distance matrix calculated ({N}x{N} = {N*N:,} entries)")
-print("=" * 80)
 
 # Solver selection----------------------
 
 print("\nSelect solving method:")
 print("1. CPLEX MIP Solver")
 print("2. Genetic Algorithm")
-solver_choice = input("Enter choice (1 or 2): ").strip()
+print("3. Simulated Annealing")
+solver_choice = input("Enter choice (1, 2, or 3): ").strip()
 
 if solver_choice == "2":
-    print("\n" + "=" * 80)
     print("Using Genetic Algorithm Solver")
-    print("=" * 80)
     
     # ECVRP-specific functions for GA------------------------------
     
@@ -308,26 +307,255 @@ if solver_choice == "2":
     if vehicles_used > 5:
         print(f"\n... and {vehicles_used - 5} more vehicles")
     
-    print("-" * 80)
-    print(f" Vehicles Used:          {vehicles_used} / {num_vehicles}")
+    print(f"\n Vehicles Used:          {vehicles_used} / {num_vehicles}")
     print(f" Customers Served:       {num_customers} / {num_customers}")
     print(f" Total Distance:         {total_distance:.2f} km")
     print(f"  Total Waste Collected:  {total_waste_collected} kg ({total_waste_collected/1000:.1f} tons)")
     print(f" Total Energy Consumed:  {total_energy:.2f} kWh")
     print(f" Average Energy per km:  {total_energy/total_distance:.3f} kWh/km")
-    print("=" * 80)
+    print("-" * 80)
     
     import sys
     sys.exit(0)
 
+
+elif solver_choice == "3":
+    print("Using Simulated Annealing Solver")
+    
+    # ECVRP-specific functions for SA-------------------------------
+    
+    def create_ecvrp_solution():
+        """Create random ECVRP solution (list of routes)"""
+        customers = list(CUSTOMERS)
+        random.shuffle(customers)
+        
+        routes = []
+        current_route = [depot]
+        current_load = 0
+        
+        for customer in customers:
+            if current_load + demand[customer] <= vehicle_capacity:
+                current_route.append(customer)
+                current_load += demand[customer]
+            else:
+                current_route.append(depot)
+                routes.append(current_route)
+                current_route = [depot, customer]
+                current_load = demand[customer]
+        
+        if len(current_route) > 1:
+            current_route.append(depot)
+            routes.append(current_route)
+        
+        while len(routes) < num_vehicles:
+            routes.append([depot, depot])
+        
+        return routes[:num_vehicles]
+    
+    def calculate_ecvrp_cost(solution):
+        """Calculate cost (energy + penalties) for ECVRP solution"""
+        total_energy = 0
+        penalty = 0
+        
+        # Track served customers
+        served = set()
+        for route in solution:
+            for node in route:
+                if node in CUSTOMERS:
+                    served.add(node)
+        
+        # Calculate energy and check feasibility
+        for route in solution:
+            if len(route) <= 2:
+                continue
+            
+            route_energy = 0
+            current_load = 0
+            current_battery = battery_capacity
+            capacity_violated = False
+            battery_violated = False
+            
+            for i in range(len(route) - 1):
+                from_node = route[i]
+                to_node = route[i + 1]
+                
+                # Update load
+                if to_node in CUSTOMERS:
+                    current_load += demand[to_node]
+                elif to_node == depot and from_node != depot:
+                    current_load = 0
+                
+                # Check capacity
+                if current_load > vehicle_capacity:
+                    capacity_violated = True
+                
+                # Calculate energy
+                dist = distance[from_node][to_node]
+                energy = dist * (alpha_empty + alpha_loaded * current_load)
+                route_energy += energy
+                
+                # Update battery
+                if to_node == depot:
+                    current_battery = battery_capacity
+                else:
+                    current_battery -= energy
+                
+                # Check battery
+                if current_battery < 0:
+                    battery_violated = True
+            
+            total_energy += route_energy
+            
+            if capacity_violated:
+                penalty += 5000
+            if battery_violated:
+                penalty += 5000
+        
+        # Penalty for unserved customers
+        unserved = len(CUSTOMERS) - len(served)
+        penalty += unserved * 50000
+        
+        # Penalty for duplicate customers
+        all_customers = []
+        for route in solution:
+            all_customers.extend([n for n in route if n in CUSTOMERS])
+        duplicates = len(all_customers) - len(set(all_customers))
+        penalty += duplicates * 50000
+        
+        # Cost (lower is better)
+        return total_energy + penalty
+    
+    def create_ecvrp_neighbor(solution):
+        """Create neighbor solution using swap, reverse, or insertion"""
+        neighbor = [route.copy() for route in solution]
+        
+        # Get non-empty routes
+        non_empty = [i for i, r in enumerate(neighbor) if len(r) > 3]
+        
+        if not non_empty:
+            return neighbor
+        
+        # Choose operator
+        operator = random.choice(['swap', 'reverse', 'insertion'])
+        
+        if operator == 'swap' and len(non_empty) >= 2:
+            # Swap two customers between routes
+            r1_idx, r2_idx = random.sample(non_empty, 2)
+            r1 = neighbor[r1_idx]
+            r2 = neighbor[r2_idx]
+            
+            c1_idx = random.randint(1, len(r1) - 2)
+            c2_idx = random.randint(1, len(r2) - 2)
+            r1[c1_idx], r2[c2_idx] = r2[c2_idx], r1[c1_idx]
+            
+        elif operator == 'reverse':
+            # Reverse segment within a route
+            route_idx = random.choice(non_empty)
+            route = neighbor[route_idx]
+            
+            if len(route) > 4:
+                i = random.randint(1, len(route) - 3)
+                j = random.randint(i + 1, len(route) - 2)
+                route[i:j+1] = list(reversed(route[i:j+1]))
+        
+        else:  # insertion
+            # Move a customer to different position
+            route_idx = random.choice(non_empty)
+            route = neighbor[route_idx]
+            
+            if len(route) > 4:
+                # Remove customer from position
+                remove_idx = random.randint(1, len(route) - 2)
+                customer = route.pop(remove_idx)
+                
+                # Insert at new position
+                insert_idx = random.randint(1, len(route) - 1)
+                route.insert(insert_idx, customer)
+        
+        return neighbor
+    
+    # Run SA Solver------------------
+    
+    sa = SimulatedAnnealing(max_iterations=200, max_sub_iterations=20, 
+                           initial_temp=0.05, alpha=0.98)
+    
+    import time
+    solve_start = time.time()
+    
+    solution_routes, best_cost, cost_history = sa.solve(
+        create_solution_fn=create_ecvrp_solution,
+        cost_fn=calculate_ecvrp_cost,
+        create_neighbor_fn=create_ecvrp_neighbor,
+        verbose=True
+    )
+    
+    solve_time = time.time() - solve_start
+    
+    # Calculate solution metrics
+    total_energy = 0
+    total_distance = 0
+    total_waste_collected = 0
+    vehicles_used = 0
+    
+    print("Solution found by SA!")
+    print(f"\n  Solve Time: {solve_time:.2f} seconds")
+    
+    for k, route in enumerate(solution_routes):
+        if len(route) > 2:
+            vehicles_used += 1
+            
+            # Calculate energy
+            route_energy = 0
+            current_load = 0
+            for i in range(len(route) - 1):
+                from_node = route[i]
+                to_node = route[i + 1]
+                
+                if to_node in CUSTOMERS:
+                    current_load += demand[to_node]
+                elif to_node == depot and from_node != depot:
+                    current_load = 0
+                
+                dist = distance[from_node][to_node]
+                energy = dist * (alpha_empty + alpha_loaded * current_load)
+                route_energy += energy
+                total_distance += dist
+            
+            total_energy += route_energy
+            
+            customers_served = [c for c in route if c in CUSTOMERS]
+            waste = sum(demand[c] for c in customers_served)
+            total_waste_collected += waste
+            
+            if vehicles_used <= 5:
+                print(f"\nVehicle {k}:")
+                route_preview = route[:30] if len(route) > 30 else route
+                print(f"  Route: {' -> '.join(map(str, route_preview))}")
+                if len(route) > 30:
+                    print(f"  ... ({len(route)} total stops)")
+                print(f"  Customers: {len(customers_served)}, Waste: {waste} kg, Energy: {route_energy:.1f} kWh")
+    
+    if vehicles_used > 5:
+        print(f"\n... and {vehicles_used - 5} more vehicles")
+    
+    print(f"\n Vehicles Used:          {vehicles_used} / {num_vehicles}")
+    print(f" Customers Served:       {num_customers} / {num_customers}")
+    print(f" Total Distance:         {total_distance:.2f} km")
+    print(f" Total Waste Collected:  {total_waste_collected} kg ({total_waste_collected/1000:.1f} tons)")
+    print(f" Total Energy Consumed:  {total_energy:.2f} kWh")
+    print(f" Average Energy per km:  {total_energy/total_distance:.3f} kWh/km")
+    print("-" * 80)
+    
+    import sys
+    sys.exit(0)
+
+
+
 # CPLEX MIP Solver----------------------
 
-print("\n" + "=" * 80)
-print("USING CPLEX MIP SOLVER")
-print("=" * 80)
+print("Using CPLEX MIP Solver")
 
-
-## Model initialization
+# Model initialization
 
 print("\nBuilding optimization model...")
 model = Model(name="ECVRP_Waste_Collection")
@@ -385,7 +613,9 @@ print(f"\n Total variables created: {total_vars:,}")
 print(f"  - Binary: {len(x) + len(charge) + len(visit):,}")
 print(f"  - Continuous: {len(load) + len(battery) + len(u):,}")
 
-## Objective Function--------------------------------
+
+
+### Objective Function--------------------------------
 
 # Minimize total energy consumption
 # Energy for arc (i,j) with vehicle k = distance[i][j] * (alpha_empty * x + alpha_loaded * u)

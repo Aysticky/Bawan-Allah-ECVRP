@@ -46,7 +46,7 @@ class GeneticAlgorithm:
         
         if verbose:
             print(f"Running GA for {generations} generations...")
-            print("=" * 70)
+            print("-" * 70)
         
         for gen in range(generations):
             gen_start = time.time()
@@ -93,7 +93,7 @@ class GeneticAlgorithm:
             population = new_population
         
         if verbose:
-            print("=" * 70)
+            print("-" * 70)
         
         # Return best solution
         fitness_scores = [evaluate_fn(ind) for ind in population]
@@ -106,10 +106,8 @@ class GeneticAlgorithm:
 
 if __name__ == "__main__":
     # Simple test: optimize a list of numbers to sum to target
-    print("=" * 70)
-    print("GENERIC GA TEST: Number Sequence Optimization")
-    print("=" * 70)
-    print("Goal: Find sequence of 10 numbers (0-9) that sums close to 45")
+    print("GA TEST: Number Sequence Optimization")
+    print("\n Goal: Find sequence of 10 numbers (0-9) that sums close to 45")
     
     target_sum = 45
     sequence_length = 10
@@ -142,14 +140,12 @@ if __name__ == "__main__":
         verbose=True
     )
     
-    print("\n" + "=" * 70)
-    print("SOLUTION")
-    print("=" * 70)
-    print(f"Best sequence: {solution}")
-    print(f"Sum: {sum(solution)}")
-    print(f"Target: {target_sum}")
-    print(f"Fitness: {fitness}")
-    print("=" * 70)
+    print("Solution Test Complete")
+    print(f"\n Best sequence: {solution}")
+    print(f"\n Sum: {sum(solution)}")
+    print(f"\n Target: {target_sum}")
+    print(f"\n Fitness: {fitness}")
+    print("-" * 70)
 
 """
 To test GA module, run: python ga_solver.py
