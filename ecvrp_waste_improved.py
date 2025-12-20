@@ -12,6 +12,7 @@ import random
 from customer_data import num_customers, locations, depot, demand, vehicle_capacity, battery_capacity, num_vehicles
 from ga_solver import GeneticAlgorithm
 from sa_solver import SimulatedAnnealing
+from gasa_solver import HybridGASA
 
 ## Parameters and Data
 
@@ -57,7 +58,8 @@ print("\nSelect solving method:")
 print("1. CPLEX MIP Solver")
 print("2. Genetic Algorithm")
 print("3. Simulated Annealing")
-solver_choice = input("Enter choice (1, 2, or 3): ").strip()
+print("4. Hybrid GASA")
+solver_choice = input("Enter choice (1, 2, 3, or 4): ").strip()
 
 if solver_choice == "2":
     print("Using Genetic Algorithm Solver")
@@ -550,8 +552,328 @@ elif solver_choice == "3":
     sys.exit(0)
 
 
+## ECVRP-specific function for GASA-------------------------------
 
-# CPLEX MIP Solver----------------------
+elif solver_choice == "4":
+    print("Using GASA solver")
+    
+    # Note that GASA needs all 5 functions (GA's 4 + SA's neighbor function)
+    def create_ecvrp_individual():
+        """Create random ECVRP solution (list of routes)"""
+        customers = list(CUSTOMERS)
+        random.shuffle(customers)
+        
+        routes = []
+        current_route = [depot]
+        current_load = 0
+        
+        for customer in customers:
+            if current_load + demand[customer] <= vehicle_capacity:
+                current_route.append(customer)
+                current_load += demand[customer]
+            else:
+                current_route.append(depot)
+                routes.append(current_route)
+                current_route = [depot, customer]
+                current_load = demand[customer]
+        
+        if len(current_route) > 1:
+            current_route.append(depot)
+            routes.append(current_route)
+        
+        while len(routes) < num_vehicles:
+            routes.append([depot, depot])
+        
+        return routes[:num_vehicles]
+    
+    def evaluate_ecvrp(individual):
+        """Evaluate fitness of ECVRP solution (higher is better for GA)"""
+        total_energy = 0
+        penalty = 0
+        
+        # Track served customers
+        served = set()
+        for route in individual:
+            for node in route:
+                if node in CUSTOMERS:
+                    served.add(node)
+        
+        # Calculate energy and check feasibility
+        for route in individual:
+            if len(route) <= 2:
+                continue
+            
+            route_energy = 0
+            current_load = 0
+            current_battery = battery_capacity
+            capacity_violated = False
+            battery_violated = False
+            
+            for i in range(len(route) - 1):
+                from_node = route[i]
+                to_node = route[i + 1]
+                
+                # Update load
+                if to_node in CUSTOMERS:
+                    current_load += demand[to_node]
+                elif to_node == depot and from_node != depot:
+                    current_load = 0
+                
+                # Check capacity
+                if current_load > vehicle_capacity:
+                    capacity_violated = True
+                
+                # Calculate energy
+                dist = distance[from_node][to_node]
+                energy = dist * (alpha_empty + alpha_loaded * current_load)
+                route_energy += energy
+                
+                # Update battery
+                if to_node == depot:
+                    current_battery = battery_capacity
+                else:
+                    current_battery -= energy
+                
+                # Check battery
+                if current_battery < 0:
+                    battery_violated = True
+            
+            total_energy += route_energy
+            
+            if capacity_violated:
+                penalty += 5000
+            if battery_violated:
+                penalty += 5000
+        
+        # Penalty for unserved customers
+        unserved = len(CUSTOMERS) - len(served)
+        penalty += unserved * 50000
+        
+        # Penalty for duplicate customers
+        all_customers = []
+        for route in individual:
+            all_customers.extend([n for n in route if n in CUSTOMERS])
+        duplicates = len(all_customers) - len(set(all_customers))
+        penalty += duplicates * 50000
+        
+        # Fitness (higher is better for GA)
+        return -total_energy - penalty
+    
+    def crossover_ecvrp(parent1, parent2):
+        """Order crossover for ECVRP routes"""
+        # Flatten routes
+        customers1 = []
+        for route in parent1:
+            customers1.extend([c for c in route if c in CUSTOMERS])
+        
+        customers2 = []
+        for route in parent2:
+            customers2.extend([c for c in route if c in CUSTOMERS])
+        
+        # Order crossover
+        size = len(customers1)
+        start, end = sorted(random.sample(range(size), 2))
+        
+        offspring_customers = [None] * size
+        offspring_customers[start:end] = customers1[start:end]
+        
+        p2_idx = 0
+        for i in range(size):
+            if offspring_customers[i] is None:
+                while customers2[p2_idx] in offspring_customers:
+                    p2_idx += 1
+                offspring_customers[i] = customers2[p2_idx]
+                p2_idx += 1
+        
+        # Rebuild routes
+        offspring = []
+        current_route = [depot]
+        current_load = 0
+        
+        for customer in offspring_customers:
+            if current_load + demand[customer] <= vehicle_capacity:
+                current_route.append(customer)
+                current_load += demand[customer]
+            else:
+                current_route.append(depot)
+                offspring.append(current_route)
+                current_route = [depot, customer]
+                current_load = demand[customer]
+        
+        if len(current_route) > 1:
+            current_route.append(depot)
+            offspring.append(current_route)
+        
+        while len(offspring) < num_vehicles:
+            offspring.append([depot, depot])
+        
+        return offspring[:num_vehicles]
+    
+    def mutate_ecvrp(individual):
+        """Mutation for ECVRP routes"""
+        mutated = [route.copy() for route in individual]
+        
+        non_empty = [i for i, r in enumerate(mutated) if len(r) > 3]
+        
+        if len(non_empty) >= 2 and random.random() < 0.5:
+            # Swap mutation
+            r1_idx, r2_idx = random.sample(non_empty, 2)
+            r1 = mutated[r1_idx]
+            r2 = mutated[r2_idx]
+            
+            c1_idx = random.randint(1, len(r1) - 2)
+            c2_idx = random.randint(1, len(r2) - 2)
+            r1[c1_idx], r2[c2_idx] = r2[c2_idx], r1[c1_idx]
+        elif non_empty:
+            # Reverse mutation
+            route_idx = random.choice(non_empty)
+            route = mutated[route_idx]
+            
+            if len(route) > 4:
+                i = random.randint(1, len(route) - 3)
+                j = random.randint(i + 1, len(route) - 2)
+                route[i:j+1] = list(reversed(route[i:j+1]))
+        
+        return mutated
+    
+    def create_ecvrp_neighbor(solution):
+        """Create neighbor solution for SA local search"""
+        neighbor = [route.copy() for route in solution]
+        
+        # Get non-empty routes
+        non_empty = [i for i, r in enumerate(neighbor) if len(r) > 3]
+        
+        if not non_empty:
+            return neighbor
+        
+        # Choose operator
+        operator = random.choice(['swap', 'reverse', 'insertion'])
+        
+        if operator == 'swap' and len(non_empty) >= 2:
+            # Swap two customers between routes
+            r1_idx, r2_idx = random.sample(non_empty, 2)
+            r1 = neighbor[r1_idx]
+            r2 = neighbor[r2_idx]
+            
+            c1_idx = random.randint(1, len(r1) - 2)
+            c2_idx = random.randint(1, len(r2) - 2)
+            r1[c1_idx], r2[c2_idx] = r2[c2_idx], r1[c1_idx]
+            
+        elif operator == 'reverse':
+            # Reverse segment within a route
+            route_idx = random.choice(non_empty)
+            route = neighbor[route_idx]
+            
+            if len(route) > 4:
+                i = random.randint(1, len(route) - 3)
+                j = random.randint(i + 1, len(route) - 2)
+                route[i:j+1] = list(reversed(route[i:j+1]))
+        
+        else:  # insertion
+            # Move a customer to different position
+            route_idx = random.choice(non_empty)
+            route = neighbor[route_idx]
+            
+            if len(route) > 4:
+                # Remove customer from position
+                remove_idx = random.randint(1, len(route) - 2)
+                customer = route.pop(remove_idx)
+                
+                # Insert at new position
+                insert_idx = random.randint(1, len(route) - 1)
+                route.insert(insert_idx, customer)
+        
+        return neighbor
+    
+    # Run the Hybrid GASA--------------------------------
+    
+    gasa = HybridGASA(
+        population_size=30,      # Smaller than GA for efficiency
+        generations=80,          # More generations for convergence
+        mutation_rate=0.2,
+        elite_size=3,
+        tournament_size=5,
+        sa_iterations=15,        # SA refinement iterations
+        initial_temp=0.1,        # SA temperature
+        alpha=0.97               # SA cooling rate
+    )
+    
+    import time
+    solve_start = time.time()
+    
+    solution_routes, best_fitness, fitness_history = gasa.solve(
+        create_individual_fn=create_ecvrp_individual,
+        evaluate_fn=evaluate_ecvrp,
+        crossover_fn=crossover_ecvrp,
+        mutate_fn=mutate_ecvrp,
+        create_neighbor_fn=create_ecvrp_neighbor,
+        verbose=True
+    )
+    
+    solve_time = time.time() - solve_start
+    
+    # Calculate solution metrics
+    total_energy = 0
+    total_distance = 0
+    total_waste_collected = 0
+    vehicles_used = 0
+    
+    print("Solution found by GASA")
+    print(f"Solve Time: {solve_time:.2f} seconds")
+    
+    for k, route in enumerate(solution_routes):
+        if len(route) > 2:
+            vehicles_used += 1
+            
+            # Calculate energy
+            route_energy = 0
+            current_load = 0
+            for i in range(len(route) - 1):
+                from_node = route[i]
+                to_node = route[i + 1]
+                
+                if to_node in CUSTOMERS:
+                    current_load += demand[to_node]
+                elif to_node == depot and from_node != depot:
+                    current_load = 0
+                
+                dist = distance[from_node][to_node]
+                energy = dist * (alpha_empty + alpha_loaded * current_load)
+                route_energy += energy
+                total_distance += dist
+            
+            total_energy += route_energy
+            
+            customers_served = [c for c in route if c in CUSTOMERS]
+            waste = sum(demand[c] for c in customers_served)
+            total_waste_collected += waste
+            
+            if vehicles_used <= 5:
+                print(f"\nVehicle {k}:")
+                route_preview = route[:30] if len(route) > 30 else route
+                print(f"  Route: {' -> '.join(map(str, route_preview))}")
+                if len(route) > 30:
+                    print(f"  ... ({len(route)} total stops)")
+                print(f"  Customers: {len(customers_served)}, Waste: {waste} kg, Energy: {route_energy:.1f} kWh")
+    
+    if vehicles_used > 5:
+        print(f"\n... and {vehicles_used - 5} more vehicles")
+    
+    print("-" * 80)
+    print("\nSummary of GASA Solution")
+    print(f"Vehicles Used:          {vehicles_used} / {num_vehicles}")
+    print(f"Customers Served:       {num_customers} / {num_customers}")
+    print(f"Total Distance:         {total_distance:.2f} km")
+    print(f"Total Waste Collected:  {total_waste_collected} kg ({total_waste_collected/1000:.1f} tons)")
+    print(f"Total Energy Consumed:  {total_energy:.2f} kWh")
+    print(f"Average Energy per km:  {total_energy/total_distance:.3f} kWh/km")
+    print("-" * 80)
+    
+    import sys
+    sys.exit(0)
+
+
+## CPLEX MIP Solver----------------------
 
 print("Using CPLEX MIP Solver")
 
