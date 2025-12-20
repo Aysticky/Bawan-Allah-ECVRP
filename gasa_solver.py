@@ -174,3 +174,86 @@ class HybridGASA:
         return best_solution, best_fitness, best_fitness_history
 
 
+if __name__ == "__main__":
+    # Test with optimization problem
+    print("GASA Testing: TSP Problem")
+    print("Goal: Find shortest tour visiting all cities")
+    
+    # Simple 10-city TSP
+    num_cities = 10
+    cities = [(random.uniform(0, 100), random.uniform(0, 100)) 
+              for _ in range(num_cities)]
+    
+    def distance(city1, city2):
+        return math.hypot(city1[0] - city2[0], city1[1] - city2[1])
+    
+    def tour_length(tour):
+        total = 0
+        for i in range(len(tour)):
+            total += distance(cities[tour[i]], cities[tour[(i+1) % len(tour)]])
+        return total
+    
+    # Problem-specific functions
+    def create_individual():
+        tour = list(range(num_cities))
+        random.shuffle(tour)
+        return tour
+    
+    def evaluate(tour):
+        return -tour_length(tour)  # Negative because GA maximizes
+    
+    def crossover(parent1, parent2):
+        # Order crossover
+        size = len(parent1)
+        start, end = sorted(random.sample(range(size), 2))
+        offspring = [None] * size
+        offspring[start:end] = parent1[start:end]
+        
+        idx = 0
+        for city in parent2:
+            if city not in offspring:
+                while offspring[idx] is not None:
+                    idx += 1
+                offspring[idx] = city
+        return offspring
+    
+    def mutate(tour):
+        # Swap mutation
+        new_tour = tour.copy()
+        i, j = random.sample(range(len(tour)), 2)
+        new_tour[i], new_tour[j] = new_tour[j], new_tour[i]
+        return new_tour
+    
+    def create_neighbor(tour):
+        # 2-opt move for TSP
+        new_tour = tour.copy()
+        i, j = sorted(random.sample(range(len(tour)), 2))
+        new_tour[i:j] = reversed(new_tour[i:j])
+        return new_tour
+    
+    # Run hybrid GASA
+    gasa = HybridGASA(
+        population_size=20,
+        generations=50,
+        mutation_rate=0.2,
+        elite_size=3,
+        sa_iterations=5,
+        initial_temp=0.5,
+        alpha=0.95
+    )
+    
+    solution, fitness, history = gasa.solve(
+        create_individual_fn=create_individual,
+        evaluate_fn=evaluate,
+        crossover_fn=crossover,
+        mutate_fn=mutate,
+        create_neighbor_fn=create_neighbor,
+        verbose=True
+    )
+    
+    print("Solution Results:")
+    print("-" * 70)
+    print(f"Best tour: {solution}")
+    print(f"Tour length: {tour_length(solution):.2f}")
+    print(f"Fitness: {fitness:.2f}")
+    print("-" * 70)
