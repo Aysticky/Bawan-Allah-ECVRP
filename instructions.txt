@@ -14,5 +14,6 @@ python sample4.py
 
 # Note: VS Code should automatically detect and use the .venv
 # If you need to recreate the venv:
-# py -3.10 -m venv .venv
-# .venv/Scripts/python.exe c:/Users/ID080625/python/setup.py install
+# /c/Python310/python.exe -m venv .venv --clear
+# .venv/Scripts/python.exe -m pip install docplex
+# Copy and install CPLEX: cp -r "C:/Program Files/IBM/ILOG/CPLEX_Studio2211/cplex/python/3.10/x64_win64" ./cplex_temp && .venv/Scripts/python.exe -m pip install ./cplex_temp/ && rm -rf ./cplex_temp
