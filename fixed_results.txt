@@ -1,0 +1,344 @@
+====================================================================================================
+ECVRP Benchmark Results - Mavrovouniotis Instances
+====================================================================================================
+Solver: Hybrid GASA
+Run Date: 2026-04-12 08:41:08
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n112-k8-s11
+Status: SUCCESS
+  Customers: 100
+  Vehicles Available: 8
+  Vehicles Used: 8
+  Total Distance: 1883.35 km
+  Total Energy: 1563.88 kWh
+  Total Waste: 1458 kg (1.46 tons)
+  Energy per km: 0.830 kWh/km
+  Solve Time: 12.14 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n29-k4-s7
+Status: SUCCESS
+  Customers: 21
+  Vehicles Available: 4
+  Vehicles Used: 4
+  Total Distance: 468.89 km
+  Total Energy: 660.06 kWh
+  Total Waste: 22500 kg (22.50 tons)
+  Energy per km: 1.408 kWh/km
+  Solve Time: 1.16 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n30-k3-s7
+Status: SUCCESS
+  Customers: 22
+  Vehicles Available: 3
+  Vehicles Used: 3
+  Total Distance: 678.17 km
+  Total Energy: 894.10 kWh
+  Total Waste: 10189 kg (10.19 tons)
+  Energy per km: 1.318 kWh/km
+  Solve Time: 1.54 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n35-k3-s5
+Status: SUCCESS
+  Customers: 29
+  Vehicles Available: 3
+  Vehicles Used: 3
+  Total Distance: 669.98 km
+  Total Energy: 879.14 kWh
+  Total Waste: 12750 kg (12.75 tons)
+  Energy per km: 1.312 kWh/km
+  Solve Time: 1.44 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n37-k4-s4
+Status: SUCCESS
+  Customers: 32
+  Vehicles Available: 4
+  Vehicles Used: 4
+  Total Distance: 898.44 km
+  Total Energy: 1094.32 kWh
+  Total Waste: 29370 kg (29.37 tons)
+  Energy per km: 1.218 kWh/km
+  Solve Time: 2.10 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n60-k5-s9
+Status: SUCCESS
+  Customers: 50
+  Vehicles Available: 5
+  Vehicles Used: 5
+  Total Distance: 834.29 km
+  Total Energy: 688.62 kWh
+  Total Waste: 777 kg (0.78 tons)
+  Energy per km: 0.825 kWh/km
+  Solve Time: 3.58 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n89-k7-s13
+Status: SUCCESS
+  Customers: 75
+  Vehicles Available: 7
+  Vehicles Used: 7
+  Total Distance: 1400.33 km
+  Total Energy: 1165.51 kWh
+  Total Waste: 1364 kg (1.36 tons)
+  Energy per km: 0.832 kWh/km
+  Solve Time: 6.13 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: F-n140-k5-s5
+Status: SUCCESS
+  Customers: 134
+  Vehicles Available: 5
+  Vehicles Used: 5
+  Total Distance: 5188.65 km
+  Total Energy: 6308.59 kWh
+  Total Waste: 14620 kg (14.62 tons)
+  Energy per km: 1.216 kWh/km
+  Solve Time: 14.25 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: F-n49-k4-s4
+Status: SUCCESS
+  Customers: 44
+  Vehicles Available: 4
+  Vehicles Used: 4
+  Total Distance: 1273.97 km
+  Total Energy: 1275.99 kWh
+  Total Waste: 7220 kg (7.22 tons)
+  Energy per km: 1.002 kWh/km
+  Solve Time: 3.08 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: F-n80-k4-s8
+Status: SUCCESS
+  Customers: 71
+  Vehicles Available: 4
+  Vehicles Used: 4
+  Total Distance: 727.91 km
+  Total Energy: 2349.83 kWh
+  Total Waste: 114840 kg (114.84 tons)
+  Energy per km: 3.228 kWh/km
+  Solve Time: 5.28 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n110-k10-s9
+Status: SUCCESS
+  Customers: 100
+  Vehicles Available: 10
+  Vehicles Used: 10
+  Total Distance: 2442.30 km
+  Total Energy: 2027.65 kWh
+  Total Waste: 1810 kg (1.81 tons)
+  Energy per km: 0.830 kWh/km
+  Solve Time: 10.03 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n126-k7-s5
+Status: SUCCESS
+  Customers: 120
+  Vehicles Available: 7
+  Vehicles Used: 7
+  Total Distance: 2932.48 km
+  Total Energy: 2441.98 kWh
+  Total Waste: 1375 kg (1.38 tons)
+  Energy per km: 0.833 kWh/km
+  Solve Time: 12.06 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n163-k12-s12
+Status: SUCCESS
+  Customers: 150
+  Vehicles Available: 12
+  Vehicles Used: 12
+  Total Distance: 3189.18 km
+  Total Energy: 2646.55 kWh
+  Total Waste: 2235 kg (2.23 tons)
+  Energy per km: 0.830 kWh/km
+  Solve Time: 19.43 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n212-k16-s12
+Status: SUCCESS
+  Customers: 199
+  Vehicles Available: 16
+  Vehicles Used: 16
+  Total Distance: 5670.39 km
+  Total Energy: 4717.12 kWh
+  Total Waste: 3186 kg (3.19 tons)
+  Energy per km: 0.832 kWh/km
+  Solve Time: 30.96 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n1006-k43-s5
+Status: SUCCESS
+  Customers: 1000
+  Vehicles Available: 43
+  Vehicles Used: 43
+  Total Distance: 520847.50 km
+  Total Energy: 427153.69 kWh
+  Total Waste: 5557 kg (5.56 tons)
+  Energy per km: 0.820 kWh/km
+  Solve Time: 637.63 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n147-k7-s4
+Status: SUCCESS
+  Customers: 142
+  Vehicles Available: 7
+  Vehicles Used: 7
+  Total Distance: 47089.30 km
+  Total Energy: 45630.05 kWh
+  Total Waste: 7475 kg (7.47 tons)
+  Energy per km: 0.969 kWh/km
+  Solve Time: 15.35 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n221-k11-s7
+Status: SUCCESS
+  Customers: 213
+  Vehicles Available: 11
+  Vehicles Used: 11
+  Total Distance: 39910.29 km
+  Total Energy: 38076.48 kWh
+  Total Waste: 10256 kg (10.26 tons)
+  Energy per km: 0.954 kWh/km
+  Solve Time: 32.51 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n360-k40-s9
+Status: SUCCESS
+  Customers: 350
+  Vehicles Available: 40
+  Vehicles Used: 40
+  Total Distance: 94830.09 km
+  Total Energy: 83040.43 kWh
+  Total Waste: 17317 kg (17.32 tons)
+  Energy per km: 0.876 kWh/km
+  Solve Time: 90.76 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n469-k26-s10
+Status: SUCCESS
+  Customers: 458
+  Vehicles Available: 26
+  Vehicles Used: 26
+  Total Distance: 144539.15 km
+  Total Energy: 141595.47 kWh
+  Total Waste: 28435 kg (28.43 tons)
+  Energy per km: 0.980 kWh/km
+  Solve Time: 136.47 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n577-k30-s4
+Status: SUCCESS
+  Customers: 572
+  Vehicles Available: 30
+  Vehicles Used: 30
+  Total Distance: 143356.68 km
+  Total Energy: 118377.63 kWh
+  Total Waste: 6172 kg (6.17 tons)
+  Energy per km: 0.826 kWh/km
+  Solve Time: 206.27 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n698-k75-s13
+Status: SUCCESS
+  Customers: 684
+  Vehicles Available: 75
+  Vehicles Used: 75
+  Total Distance: 332891.84 km
+  Total Energy: 292366.58 kWh
+  Total Waste: 30299 kg (30.30 tons)
+  Energy per km: 0.878 kWh/km
+  Solve Time: 328.89 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n759-k98-s10
+Status: SUCCESS
+  Customers: 748
+  Vehicles Available: 98
+  Vehicles Used: 98
+  Total Distance: 288326.04 km
+  Total Energy: 252637.26 kWh
+  Total Waste: 38414 kg (38.41 tons)
+  Energy per km: 0.876 kWh/km
+  Solve Time: 408.41 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n830-k171-s11
+Status: SUCCESS
+  Customers: 818
+  Vehicles Available: 171
+  Vehicles Used: 171
+  Total Distance: 441308.59 km
+  Total Energy: 416406.79 kWh
+  Total Waste: 60914 kg (60.91 tons)
+  Energy per km: 0.944 kWh/km
+  Solve Time: 563.50 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n920-k207-s4
+Status: SUCCESS
+  Customers: 915
+  Vehicles Available: 207
+  Vehicles Used: 207
+  Total Distance: 659474.76 km
+  Total Energy: 534548.62 kWh
+  Total Waste: 6816 kg (6.82 tons)
+  Energy per km: 0.811 kWh/km
+  Solve Time: 720.52 seconds
+
+====================================================================================================
+SUMMARY STATISTICS
+----------------------------------------------------------------------------------------------------
+
+Total Instances: 24
+Successful: 24
+Failed: 0
+Total Time: 54.39 minutes
+
+Detailed Results Table:
+----------------------------------------------------------------------------------------------------
+Instance                   Customers   Veh Used     Distance       Energy    Time(s)
+----------------------------------------------------------------------------------------------------
+E-n112-k8-s11                    100          8      1883.35      1563.88      12.14
+E-n29-k4-s7                       21          4       468.89       660.06       1.16
+E-n30-k3-s7                       22          3       678.17       894.10       1.54
+E-n35-k3-s5                       29          3       669.98       879.14       1.44
+E-n37-k4-s4                       32          4       898.44      1094.32       2.10
+E-n60-k5-s9                       50          5       834.29       688.62       3.58
+E-n89-k7-s13                      75          7      1400.33      1165.51       6.13
+F-n140-k5-s5                     134          5      5188.65      6308.59      14.25
+F-n49-k4-s4                       44          4      1273.97      1275.99       3.08
+F-n80-k4-s8                       71          4       727.91      2349.83       5.28
+M-n110-k10-s9                    100         10      2442.30      2027.65      10.03
+M-n126-k7-s5                     120          7      2932.48      2441.98      12.06
+M-n163-k12-s12                   150         12      3189.18      2646.55      19.43
+M-n212-k16-s12                   199         16      5670.39      4717.12      30.96
+X-n1006-k43-s5                  1000         43    520847.50    427153.69     637.63
+X-n147-k7-s4                     142          7     47089.30     45630.05      15.35
+X-n221-k11-s7                    213         11     39910.29     38076.48      32.51
+X-n360-k40-s9                    350         40     94830.09     83040.43      90.76
+X-n469-k26-s10                   458         26    144539.15    141595.47     136.47
+X-n577-k30-s4                    572         30    143356.68    118377.63     206.27
+X-n698-k75-s13                   684         75    332891.84    292366.58     328.89
+X-n759-k98-s10                   748         98    288326.04    252637.26     408.41
+X-n830-k171-s11                  818        171    441308.59    416406.79     563.50
+X-n920-k207-s4                   915        207    659474.76    534548.62     720.52
+----------------------------------------------------------------------------------------------------
+
+Aggregate Statistics:
+  Total Customers Across All Instances: 7047
+  Total Distance: 2740832.57 km
+  Total Energy: 2378546.33 kWh
+  Average Energy per km: 1.060 kWh/km
+  Average Solve Time: 135.98 seconds
+
+====================================================================================================
+End of Report - 2026-04-12 09:35:32
+====================================================================================================

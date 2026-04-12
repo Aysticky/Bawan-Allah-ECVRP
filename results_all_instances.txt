@@ -1,0 +1,252 @@
+====================================================================================================
+ECVRP Benchmark Results - Mavrovouniotis Instances
+====================================================================================================
+Solver: Hybrid GASA
+Run Date: 2026-04-12 08:23:17
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n112-k8-s11
+Status: SUCCESS
+  Customers: 100
+  Vehicles Available: 8
+  Vehicles Used: 8
+  Total Distance: 1992.91 km
+  Total Energy: 1657.41 kWh
+  Total Waste: 1458 kg (1.46 tons)
+  Energy per km: 0.832 kWh/km
+  Solve Time: 10.76 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n29-k4-s7
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.03 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n30-k3-s7
+Status: SUCCESS
+  Customers: 22
+  Vehicles Available: 3
+  Vehicles Used: 3
+  Total Distance: 681.98 km
+  Total Energy: 832.32 kWh
+  Total Waste: 10189 kg (10.19 tons)
+  Energy per km: 1.220 kWh/km
+  Solve Time: 1.61 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n35-k3-s5
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.22 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n37-k4-s4
+Status: SUCCESS
+  Customers: 32
+  Vehicles Available: 4
+  Vehicles Used: 4
+  Total Distance: 976.89 km
+  Total Energy: 1372.95 kWh
+  Total Waste: 29370 kg (29.37 tons)
+  Energy per km: 1.405 kWh/km
+  Solve Time: 2.31 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n60-k5-s9
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.31 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: E-n89-k7-s13
+Status: SUCCESS
+  Customers: 75
+  Vehicles Available: 7
+  Vehicles Used: 7
+  Total Distance: 1295.34 km
+  Total Energy: 1081.18 kWh
+  Total Waste: 1364 kg (1.36 tons)
+  Energy per km: 0.835 kWh/km
+  Solve Time: 7.70 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: F-n140-k5-s5
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.20 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: F-n49-k4-s4
+Status: SUCCESS
+  Customers: 44
+  Vehicles Available: 4
+  Vehicles Used: 4
+  Total Distance: 1228.92 km
+  Total Energy: 1216.92 kWh
+  Total Waste: 7220 kg (7.22 tons)
+  Energy per km: 0.990 kWh/km
+  Solve Time: 4.49 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: F-n80-k4-s8
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.09 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n110-k10-s9
+Status: SUCCESS
+  Customers: 100
+  Vehicles Available: 10
+  Vehicles Used: 10
+  Total Distance: 2157.57 km
+  Total Energy: 1784.65 kWh
+  Total Waste: 1810 kg (1.81 tons)
+  Energy per km: 0.827 kWh/km
+  Solve Time: 10.07 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n126-k7-s5
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.18 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n163-k12-s12
+Status: SUCCESS
+  Customers: 150
+  Vehicles Available: 12
+  Vehicles Used: 12
+  Total Distance: 3245.10 km
+  Total Energy: 2702.58 kWh
+  Total Waste: 2235 kg (2.23 tons)
+  Energy per km: 0.833 kWh/km
+  Solve Time: 19.09 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: M-n212-k16-s12
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.54 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n1006-k43-s5
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 9.19 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n147-k7-s4
+Status: SUCCESS
+  Customers: 142
+  Vehicles Available: 7
+  Vehicles Used: 7
+  Total Distance: 44154.60 km
+  Total Energy: 43070.13 kWh
+  Total Waste: 7475 kg (7.47 tons)
+  Energy per km: 0.975 kWh/km
+  Solve Time: 20.88 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n221-k11-s7
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 0.46 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n360-k40-s9
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 1.60 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n469-k26-s10
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 3.47 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n577-k30-s4
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 3.73 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n698-k75-s13
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 5.22 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n759-k98-s10
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 8.30 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n830-k171-s11
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 8.39 seconds
+
+----------------------------------------------------------------------------------------------------
+Instance: X-n920-k207-s4
+Status: SOLVE_FAILED
+  Error: list index out of range
+  Time: 11.02 seconds
+
+====================================================================================================
+SUMMARY STATISTICS
+====================================================================================================
+
+Total Instances: 24
+Successful: 8
+Failed: 16
+Total Time: 2.17 minutes
+
+Detailed Results Table:
+----------------------------------------------------------------------------------------------------
+Instance                   Customers   Veh Used     Distance       Energy    Time(s)
+----------------------------------------------------------------------------------------------------
+E-n112-k8-s11                    100          8      1992.91      1657.41      10.76
+E-n30-k3-s7                       22          3       681.98       832.32       1.61
+E-n37-k4-s4                       32          4       976.89      1372.95       2.31
+E-n89-k7-s13                      75          7      1295.34      1081.18       7.70
+F-n49-k4-s4                       44          4      1228.92      1216.92       4.49
+M-n110-k10-s9                    100         10      2157.57      1784.65      10.07
+M-n163-k12-s12                   150         12      3245.10      2702.58      19.09
+X-n147-k7-s4                     142          7     44154.60     43070.13      20.88
+----------------------------------------------------------------------------------------------------
+
+Aggregate Statistics:
+  Total Customers Across All Instances: 665
+  Total Distance: 55733.31 km
+  Total Energy: 53718.14 kWh
+  Average Energy per km: 0.990 kWh/km
+  Average Solve Time: 9.61 seconds
+
+
+Failed Instances (16):
+----------------------------------------------------------------------------------------------------
+  E-n29-k4-s7: list index out of range
+  E-n35-k3-s5: list index out of range
+  E-n60-k5-s9: list index out of range
+  F-n140-k5-s5: list index out of range
+  F-n80-k4-s8: list index out of range
+  M-n126-k7-s5: list index out of range
+  M-n212-k16-s12: list index out of range
+  X-n1006-k43-s5: list index out of range
+  X-n221-k11-s7: list index out of range
+  X-n360-k40-s9: list index out of range
+  X-n469-k26-s10: list index out of range
+  X-n577-k30-s4: list index out of range
+  X-n698-k75-s13: list index out of range
+  X-n759-k98-s10: list index out of range
+  X-n830-k171-s11: list index out of range
+  X-n920-k207-s4: list index out of range
+
+====================================================================================================
+End of Report - 2026-04-12 08:25:27
+====================================================================================================
